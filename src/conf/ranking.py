@@ -1,0 +1,5 @@
+import os
+
+RANKING_INITIAL_RANK = int(os.getenv("RANKING_INITIAL_RANK", 5))
+RANKING_MIN_RANK = int(os.getenv("RANKING_MIN_RANK", -2))
+RANKING_MAX_RANK = int(os.getenv("RANKING_MIN_RANK", 11))

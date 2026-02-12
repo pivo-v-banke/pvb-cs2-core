@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7
+    container_name: pvb-cs2-dev-redis
+    ports:
+      - "16379:6379"
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7
+    container_name: pvb-cs2-dev-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+      - MONGO_INITDB_DATABASE=pvb-cs2
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
