@@ -74,6 +74,8 @@ class WebhookSender:
             logger.exception(exc)
             return WebhookSendResult(id=webhook.id, status=WebhookSendStatus.FAILED)
 
+        finally:
+            await session.close()
 
     @lru_cache
     async def _get_match(self) -> Match:

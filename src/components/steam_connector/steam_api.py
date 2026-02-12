@@ -1,93 +1,78 @@
 import asyncio
-import aiohttp
 import logging
+import random
 from typing import Any
 
-from conf.steam_connector import STEAM_API_KEY, STEAM_API_MAX_PARALLEL_CONNECTIONS, STEAM_API_TIMEOUT
+import aiohttp
+
+from conf.steam_connector import (
+    STEAM_API_KEY,
+    STEAM_API_MAX_PARALLEL_CONNECTIONS,
+    STEAM_API_TIMEOUT,
+)
 from utils.concurrency import RedisSemaphore
 
 logger = logging.getLogger(__name__)
 
 
-class SteamAPIClient:
-    BASE_URL = "https://api.steampowered.com"
-    MAX_IDS_PER_REQUEST = 100
+class SteamAPIClientError(Exception):
+    pass
 
-    def __init__(self):
-        self.api_key = STEAM_API_KEY
-        self.timeout = STEAM_API_TIMEOUT
-        self.semaphore = RedisSemaphore(
+
+class SteamAPIClient:
+    base_url = "https://api.steampowered.com"
+    max_ids_per_request = 100
+
+    def __init__(self) -> None:
+        self._api_key = STEAM_API_KEY
+        self._timeout = aiohttp.ClientTimeout(total=STEAM_API_TIMEOUT)
+        self._session: aiohttp.ClientSession | None = None
+        self._semaphore = RedisSemaphore(
             "steam-api-client-semaphore",
             capacity=STEAM_API_MAX_PARALLEL_CONNECTIONS,
         )
 
+    async def _get_session(self) -> aiohttp.ClientSession:
+        if self._session is None or self._session.closed:
+            self._session = aiohttp.ClientSession(timeout=self._timeout)
+        return self._session
+
+    async def close(self) -> None:
+        if self._session and not self._session.closed:
+            await self._session.close()
+
+    async def __aenter__(self) -> "SteamAPIClient":
+        return self
+
+    async def __aexit__(self, *_, **__) -> None:
+        await self.close()
+
     async def get_profiles_info(self, steam_ids: list[str]) -> dict[str, dict[str, Any] | None]:
-
-        await self.semaphore.acquire()
-        try:
-            return await self._get_profiles_info(steam_ids)
-        finally:
-            await self.semaphore.release()
-
-    async def _get_profiles_info(
-        self,
-        steam_ids: list[str],
-    ) -> dict[str, dict[str, Any] | None]:
         result: dict[str, dict[str, Any] | None] = {sid: None for sid in steam_ids}
 
-        if not self.api_key or not self.api_key.strip():
+        if not self._api_key or not self._api_key.strip():
             logger.warning("SteamAPIClient: STEAM_API_KEY not provided; cannot fetch profiles")
             return result
 
         if not steam_ids:
             return result
 
-        timeout = aiohttp.ClientTimeout(total=self.timeout)
-
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-
-            for i in range(0, len(steam_ids), self.MAX_IDS_PER_REQUEST):
-                batch = steam_ids[i:i + self.MAX_IDS_PER_REQUEST]
+        await self._semaphore.acquire()
+        try:
+            for i in range(0, len(steam_ids), self.max_ids_per_request):
+                batch = steam_ids[i : i + self.max_ids_per_request]
 
                 params = {
-                    "key": self.api_key,
+                    "key": self._api_key,
                     "steamids": ",".join(str(x) for x in batch),
                 }
 
-                logger.debug(
-                    "SteamAPIClient: fetching profile info for %s steam ids",
-                    len(batch),
+
+                data = await self._safe_request(
+                    method="GET",
+                    url="/ISteamUser/GetPlayerSummaries/v2/",
+                    query_params=params,
                 )
-
-                try:
-                    async with session.get(
-                        f"{self.BASE_URL}/ISteamUser/GetPlayerSummaries/v2/",
-                        params=params,
-                    ) as resp:
-
-                        if resp.status in (401, 403):
-                            logger.warning("SteamAPIClient: invalid Steam API key (HTTP %s)", resp.status)
-                            return result
-
-                        if resp.status != 200:
-                            logger.warning(
-                                "SteamAPIClient: request failed (HTTP %s)",
-                                resp.status,
-                            )
-                            continue
-
-                        data = await resp.json(content_type=None)
-
-                except asyncio.TimeoutError:
-                    logger.warning("SteamAPIClient: timeout fetching Steam profiles")
-                    continue
-                except aiohttp.ClientError as e:
-                    logger.warning("SteamAPIClient: HTTP error fetching Steam profiles: %s", e)
-                    continue
-                except Exception as e:
-                    logger.warning("SteamAPIClient: unexpected error fetching Steam profiles: %s", e)
-                    continue
-
                 players = (
                     data.get("response", {}).get("players", [])
                     if isinstance(data, dict)
@@ -95,8 +80,92 @@ class SteamAPIClient:
                 )
 
                 for p in players:
-                    sid = p.get("steamid")
+                    sid = p.get("steamid") if isinstance(p, dict) else None
                     if sid in result:
                         result[sid] = p
 
-        return result
+            return result
+        finally:
+            await self._semaphore.release()
+
+
+    async def get_match_history(
+        self,
+        player_steam_id: str,
+        access_code: str,
+        known_match_code: str,
+    ) -> list[str]:
+        result: list[str] = []
+        current_code = known_match_code
+
+        await self._semaphore.acquire()
+        try:
+            while True:
+                data = await self._safe_request(
+                    method="GET",
+                    url="/ICSGOPlayers_730/GetNextMatchSharingCode/v1/",
+                    query_params={
+                        "key": self._api_key,
+                        "steamid": player_steam_id,
+                        "steamidkey": access_code,
+                        "knowncode": current_code,
+                    },
+                )
+
+                next_code = (
+                    data.get("result", {}).get("nextcode")
+                    if isinstance(data, dict)
+                    else None
+                )
+
+                if not next_code or next_code == "n/a":
+                    break
+
+                result.append(next_code)
+                current_code = next_code
+
+            return result
+        finally:
+            await self._semaphore.release()
+
+
+    async def _safe_request(
+        self,
+        method: str,
+        url: str,
+        payload: dict[str, Any] | None = None,
+        query_params: dict[str, Any] | None = None,
+    ) -> Any:
+        logger.debug("SteamAPIClient[_safe_request]: Requesting url: %s:%s", method, url)
+
+        if not url.startswith("/"):
+            url = f"/{url}"
+
+        full_url = f"{self.base_url}{url}"
+        session = await self._get_session()
+
+        try:
+            await asyncio.sleep(random.randint(200, 2000) / 1000)
+            async with session.request(
+                method=method.upper(),
+                url=full_url,
+                json=payload,
+                params=query_params,
+            ) as resp:
+                if resp.status in (401, 403):
+                    text = await resp.text()
+                    raise SteamAPIClientError(f"Steam API key invalid (HTTP {resp.status}): {text}")
+
+                if resp.status >= 400:
+                    text = await resp.text()
+                    raise SteamAPIClientError(f"Steam API error {resp.status}: {text}")
+
+                content_type = resp.headers.get("Content-Type", "")
+                if "application/json" in content_type:
+                    return await resp.json(content_type=None)
+
+                return await resp.text()
+
+        except aiohttp.ClientError as e:
+            logger.exception("SteamAPIClient[_safe_request]:", exc_info=e)
+            raise SteamAPIClientError(f"Steam API request failed: {e}") from e

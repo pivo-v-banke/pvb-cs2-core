@@ -1,6 +1,7 @@
 import bz2
 import functools
 import logging
+import math
 import os
 from pathlib import Path
 from typing import Callable, Coroutine
@@ -30,7 +31,10 @@ __all__ = [
     "DemoParsingContext",
     "request_demo_url_task",
     "download_demo_file_task",
-    "parse_demo_task"
+    "parse_demo_task",
+    "rank_calculation_task",
+    "refresh_steam_profiles_task",
+    "send_webhooks_task"
 ]
 
 logger = logging.getLogger(__name__)
@@ -135,9 +139,18 @@ class DownloadDemoFileTask(Task):
         async with aiohttp.ClientSession() as session:
             async with session.get(demo_url) as resp:
                 resp.raise_for_status()
-
+                content_length = resp.headers.get("Content-Length")
+                if not content_length:
+                    logger.warning("DownloadDemoFileTask: No content length for %s", demo_url)
+                else:
+                    content_length = int(content_length)
+                chunk_size = 1024 * 1024
+                total_chunks = content_length // chunk_size if content_length else None
+                current_chunk = 0
                 with tmp_path.open("wb") as f:
                     async for chunk in resp.content.iter_chunked(1024 * 1024):
+                        if logger.isEnabledFor(logging.DEBUG) and total_chunks:
+                            logger.debug("DownloadDemoFileTask: downloaded %s / %s chunks...")
                         logger.info("DownloadDemoFileTask: Downloading %s...",match_code)
                         if chunk:
                             f.write(chunk)
@@ -214,8 +227,10 @@ class RefreshSteamProfilesTask(Task):
     async def run(self, context: dict) -> dict:
         context: DemoParsingContext = DemoParsingContext.model_validate(context)
         player_steam_ids = context.match.player_steam_ids
-        steam_api = SteamAPIClient()
-        steam_profiles_info = await steam_api.get_profiles_info(player_steam_ids)
+
+        async with SteamAPIClient() as client:
+            steam_profiles_info = await client.get_profiles_info(player_steam_ids)
+
         player_manager = PlayerManager(get_database())
 
         logger.info("RefreshSteamProfilesTask: Updating steam profiles info for steam ids %s",  player_steam_ids)

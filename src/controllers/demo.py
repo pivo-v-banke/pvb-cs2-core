@@ -1,5 +1,5 @@
 from api_models.demo import RunDemoParsingRequest
-from components.runner.runner import run_demo_parsing
+from components.runner.parsing_runner import run_demo_parsing
 
 
 async def run_demo_parsing_controller(request: RunDemoParsingRequest) -> None:

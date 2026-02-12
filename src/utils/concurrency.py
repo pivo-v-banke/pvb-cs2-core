@@ -85,10 +85,7 @@ class RedisSemaphore:
         self.ttl = ttl if ttl is not None else REDIS_LOCK_TTL
         self.timeout = timeout if timeout is not None else REDIS_LOCK_TIMEOUT
         self.raise_locked = raise_locked
-        if IN_CELERY_WORKER_PROCESS:
-            self.redis = get_redis()
-        else:
-            self.redis = redis_client
+        self.redis = get_redis()
 
         self.token = uuid.uuid4().hex
 

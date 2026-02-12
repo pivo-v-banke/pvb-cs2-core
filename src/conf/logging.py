@@ -1,7 +1,8 @@
 import os
 
+LOGGING_LEVEL = os.getenv("LOGGING_CONFIG", "INFO")
 LOGGING_CONFIG = {
-    "level": os.getenv("LOGGING_LEVEL", "INFO"),
+    "level": LOGGING_LEVEL,
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
@@ -22,16 +23,16 @@ LOGGING_CONFIG = {
     },
     "loggers": {
         "": {"handlers": ["default"], "level": "INFO"},
-        "uvicorn.error": {"handlers": ["default"], "level": "INFO", "propagate": False},
-        "uvicorn.access": {"handlers": ["access"], "level": "INFO", "propagate": False},
-        "app": {"handlers": ["default"], "level": "DEBUG", "propagate": False},
-        "SteamClient": {"handlers": ["default"], "level": "INFO", "propagate": False},
-        "celery": {"handlers": ["celery"], "level": os.getenv("CELERY_LOGGING_LEVEL", "INFO"), "propagate": False},
-        "celery.app.trace": {"handlers": ["celery"], "level": os.getenv("CELERY_LOGGING_LEVEL", "INFO"), "propagate": False},
-        "celery.worker": {"handlers": ["celery"], "level": os.getenv("CELERY_LOGGING_LEVEL", "INFO"), "propagate": False},
-        "celery.redirected": {"handlers": ["celery"], "level": os.getenv("CELERY_LOGGING_LEVEL", "INFO"), "propagate": False},
-        "kombu": {"handlers": ["celery"], "level": os.getenv("CELERY_LOGGING_LEVEL", "WARNING"), "propagate": False},
-        "amqp": {"handlers": ["celery"], "level": os.getenv("CELERY_LOGGING_LEVEL", "WARNING"), "propagate": False},
-        "billiard": {"handlers": ["celery"], "level": os.getenv("CELERY_LOGGING_LEVEL", "WARNING"), "propagate": False},
+        "uvicorn.error": {"handlers": ["default"], "level": LOGGING_LEVEL, "propagate": False},
+        "uvicorn.access": {"handlers": ["access"], "level": LOGGING_LEVEL, "propagate": False},
+        "app": {"handlers": ["default"], "level": LOGGING_LEVEL, "propagate": False},
+        "SteamClient": {"handlers": ["default"], "level": LOGGING_LEVEL, "propagate": False},
+        "celery": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
+        "celery.app.trace": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
+        "celery.worker": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
+        "celery.redirected": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
+        "kombu": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
+        "amqp": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
+        "billiard": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
     },
 }

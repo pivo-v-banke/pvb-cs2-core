@@ -1,5 +1,6 @@
 from db.managers.base import BaseMongoDBManager
-from db.models.models import DemoParsingTask, Match, Player, PlayerMatchStat, PlayerRankChange, MatchStatsWebhook
+from db.models.models import DemoParsingTask, Match, Player, PlayerMatchStat, PlayerRankChange, MatchStatsWebhook, \
+    MatchSource
 
 
 class DemoParsingTaskManager(BaseMongoDBManager):
@@ -16,6 +17,9 @@ class PlayerManager(BaseMongoDBManager):
     model = Player
     collection_name = 'players'
 
+class MatchSourceManager(BaseMongoDBManager):
+    model = MatchSource
+    collection_name = 'match_sources'
 
 class PlayerMatchStatManager(BaseMongoDBManager):
     model = PlayerMatchStat
