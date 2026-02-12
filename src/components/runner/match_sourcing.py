@@ -79,11 +79,13 @@ class MatchSourceCollector:
         if not match_codes:
             return
 
-        last_match_code = match_codes[-1]
+        last_match_code = match_codes[0]
+        first_match_code = match_codes[-1]
         await self.source_manager.update(
             id_=source.id,
             patch={
                 "last_match_code": last_match_code,
+                "first_match_code": first_match_code,
             }
         )
 

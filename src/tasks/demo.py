@@ -150,10 +150,10 @@ class DownloadDemoFileTask(Task):
                 with tmp_path.open("wb") as f:
                     async for chunk in resp.content.iter_chunked(1024 * 1024):
                         if logger.isEnabledFor(logging.DEBUG) and total_chunks:
-                            logger.debug("DownloadDemoFileTask: downloaded %s / %s chunks...")
-                        logger.info("DownloadDemoFileTask: Downloading %s...",match_code)
+                            logger.debug("DownloadDemoFileTask: downloaded %s / %s chunks...", current_chunk, total_chunks)
                         if chunk:
                             f.write(chunk)
+                            current_chunk += 1
 
         with tmp_path.open("rb") as f:
             head = f.read(16)

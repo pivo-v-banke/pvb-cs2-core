@@ -49,6 +49,7 @@ class MatchSource(BaseMongoModel):
     steam_id: str
     auth_code: str
     last_match_code: str
+    first_match_code: str | None = None
     active: bool
 
 

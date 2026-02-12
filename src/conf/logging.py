@@ -22,7 +22,7 @@ LOGGING_CONFIG = {
         "celery": {"class": "logging.StreamHandler", "formatter": "celery"},
     },
     "loggers": {
-        "": {"handlers": ["default"], "level": "INFO"},
+        "": {"handlers": ["default"], "level": LOGGING_LEVEL, "propagate": False},
         "uvicorn.error": {"handlers": ["default"], "level": LOGGING_LEVEL, "propagate": False},
         "uvicorn.access": {"handlers": ["access"], "level": LOGGING_LEVEL, "propagate": False},
         "app": {"handlers": ["default"], "level": LOGGING_LEVEL, "propagate": False},
