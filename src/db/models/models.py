@@ -1,4 +1,5 @@
 from components.parsing.models import DemoParsingState
+from components.steam_connector.models import CS2DemoInfo
 from src.db.models.base import BaseMongoModel
 
 
@@ -21,7 +22,7 @@ class Match(BaseMongoModel):
     t_score: int
     ct_score: int
 
-    demo_url: str | None = None
+    demo_info: CS2DemoInfo | None = None
 
 
 class PlayerMatchStat(BaseMongoModel):

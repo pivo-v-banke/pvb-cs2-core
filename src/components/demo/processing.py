@@ -37,6 +37,7 @@ class DemoProcessing:
                 "t_score": match_info.t_score,
                 "ct_score": match_info.ct_score,
                 "map_name": match_info.map_name,
+                "demo_info": self.demo_info.model_dump(),
             }
         )
 

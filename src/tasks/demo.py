@@ -21,7 +21,7 @@ from components.webhook.sender import WebhookSender
 from conf.demo import DEMO_BASE_DIR
 from conf.parsing import PARSING_DEDUP_KEY_TTL
 from db import get_database
-from db.managers.managers import PlayerManager
+from db.managers.managers import PlayerManager, MatchManager
 from db.models.models import Match
 from utils.concurrency import RedisLock
 
@@ -87,8 +87,18 @@ async def request_demo_url_task(context: dict) -> dict:
     parsing_lock = RedisLock(context.lock_key, ttl=PARSING_DEDUP_KEY_TTL)
     await parsing_lock.reacquire()
 
-    async with SteamConnectorClient() as client:
-        demo_info = await client.get_demo_url(match_code)
+    existing_match: Match = await MatchManager(get_database()).get(match_code=match_code)
+
+    demo_info: CS2DemoInfo | None = None
+    if existing_match and existing_match.demo_info:
+        demo_info = existing_match.demo_info
+        logger.info(
+            "request_demo_url_task: Found existing match %s with existing demo info. Skipping request to connector",
+            match_code
+        )
+    else:
+        async with SteamConnectorClient() as client:
+            demo_info = await client.get_demo_url(match_code)
 
     context.demo_info = demo_info
     logger.info("request_demo_url_task: found demo url %s", demo_info.demo_url)
