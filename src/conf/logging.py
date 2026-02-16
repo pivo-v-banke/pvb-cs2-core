@@ -1,6 +1,6 @@
 import os
 
-LOGGING_LEVEL = os.getenv("LOGGING_CONFIG", "INFO")
+LOGGING_LEVEL = os.getenv("LOGGING_LEVEL", "INFO")
 LOGGING_CONFIG = {
     "level": LOGGING_LEVEL,
     "version": 1,
@@ -29,7 +29,7 @@ LOGGING_CONFIG = {
         "SteamClient": {"handlers": ["default"], "level": LOGGING_LEVEL, "propagate": False},
         "celery": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
         "celery.app.trace": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
-        "celery.worker": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
+        "celery.worker": {"handlers": ["celery"], "level": "INFO", "propagate": False},
         "celery.redirected": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
         "kombu": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
         "amqp": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},

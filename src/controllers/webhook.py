@@ -2,8 +2,9 @@ from starlette.responses import Response
 
 from api_models.webhook import MatchStatsWebhookPayload
 from db import get_mongo_db
-from db.managers.managers import MatchStatsWebhookManager
-from db.models.models import MatchStatsWebhook
+from db.managers.managers import MatchStatsWebhookManager, MatchManager
+from db.models.models import MatchStatsWebhook, Match
+from tasks import DemoParsingContext, send_webhooks_task
 
 
 async def webhook_list_controller() -> list[MatchStatsWebhook]:
@@ -34,3 +35,22 @@ async def webhook_delete_controller(webhook_id: str) -> Response:
     await manager.delete(id_=webhook_id)
 
     return Response(status_code=204)
+
+
+async def send_for_match(match: str):
+    filter_by = {}
+    if str(match).startswith("CSGO"):
+        filter_by["match_code"] = match
+    elif match.isdigit():
+        filter_by["cs2_match_id"] = int(match)
+    else:
+        raise ValueError("Invalid match identity")
+
+
+    match: Match = await MatchManager(get_mongo_db()).get(**filter_by, raise_not_found=True)
+    context = DemoParsingContext(
+        match=match,
+        match_code=match.match_code,
+        lock_key=match.match_code,
+    )
+    send_webhooks_task.apply_async(args=(context.model_dump(),))

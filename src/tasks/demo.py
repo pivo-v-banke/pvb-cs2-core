@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from celery_app import celery_app, async_context
 from components.demo.processing import DemoProcessing
 from components.parsing.checkers import DemoParsingDeduplicationChecker
+from components.ranking.player_stats import PlayerStatsUpdater
 from components.ranking.rank_updater import RankUpdater
 from components.steam_connector.client import SteamConnectorClient
 from components.steam_connector.models import CS2DemoInfo
@@ -21,7 +22,7 @@ from components.steam_connector.steam_api import SteamAPIClient
 from components.webhook.sender import WebhookSender
 from conf.demo import DEMO_BASE_DIR
 from conf.parsing import PARSING_DEDUP_KEY_TTL
-from db import get_database
+from db import get_database, get_mongo_db
 from db.managers.managers import PlayerManager, MatchManager
 from db.models.models import Match
 from utils.concurrency import RedisLock
@@ -212,9 +213,27 @@ async def rank_calculation_task(context: dict) -> dict:
     context: DemoParsingContext = DemoParsingContext.model_validate(context)
     cs2_match_id = context.match.cs2_match_id
     rank_updater = RankUpdater(cs2_match_id)
+    stats_updater = PlayerStatsUpdater()
     await rank_updater.update_player_ranks()
+    await stats_updater.calculate_players_stats(context.match.player_steam_ids)
+
 
     return context.model_dump()
+
+
+@celery_app.task(queue="demo_parsing")
+@async_context
+@unlock_on_error
+async def all_players_calibration_task():
+    matches = await MatchManager(get_mongo_db()).list_(
+        sort=[("created", 1)]
+    )
+    for match in matches:
+        rank_updater = RankUpdater(match.cs2_match_id)
+        stats_updater = PlayerStatsUpdater()
+        await rank_updater.update_player_ranks()
+        await stats_updater.calculate_players_stats(match.player_steam_ids)
+
 
 
 class RefreshSteamProfilesTask(Task):

@@ -3,7 +3,7 @@ from typing import Any, Optional
 
 from demoparser2 import DemoParser as DP2
 
-from src.components.parsing.models import MatchInfo, PlayerStatInfo, PlayerInfo
+from components.parsing.models import MatchInfo, PlayerStatInfo, PlayerInfo
 
 
 class CS2DemoInfoParser:

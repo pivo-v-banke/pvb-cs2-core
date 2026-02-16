@@ -136,7 +136,7 @@ class SteamAPIClient:
         payload: dict[str, Any] | None = None,
         query_params: dict[str, Any] | None = None,
     ) -> Any:
-        logger.debug("SteamAPIClient[_safe_request]: Requesting url: %s:%s", method, url)
+        logger.info("SteamAPIClient[_safe_request]: Requesting url: %s:%s", method, url)
 
         if not url.startswith("/"):
             url = f"/{url}"

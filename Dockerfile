@@ -19,8 +19,7 @@ RUN uv venv /opt/venv \
 
 COPY src/ /app/src/
 
-
-FROM python:3.12-slim
+FROM python:3.12-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -38,6 +37,13 @@ COPY --from=builder /app/src /app/src
 RUN useradd -m appuser
 USER appuser
 
-EXPOSE 8000
 
+FROM runtime AS uvicorn
+
+EXPOSE 8000
 CMD ["/opt/venv/bin/uvicorn", "app:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
+
+
+FROM runtime AS celery
+
+CMD ["/opt/venv/bin/celery", "-A", "celery_app:celery_app", "worker", "-Q", "demo_parsing,demo_collecting"]

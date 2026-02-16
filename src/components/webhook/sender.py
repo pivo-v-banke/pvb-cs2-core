@@ -4,6 +4,7 @@ import logging
 import aiohttp
 from anyio.functools import lru_cache
 
+from components.ranking.models import RANK_DESCRIPTIONS
 from components.webhook.models import WebhookSendResult, WebhookSendStatus, WebhookBody
 from db import get_database
 from db.managers.managers import MatchManager, MatchStatsWebhookManager, PlayerRankChangeManager, \
@@ -121,5 +122,6 @@ class WebhookSender:
             stats=match_stats,
             rank_changes=rank_changes,
             players=players,
+            rank_descriptions=RANK_DESCRIPTIONS,
         )
 

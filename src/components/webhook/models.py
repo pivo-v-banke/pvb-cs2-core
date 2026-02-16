@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+from components.ranking.models import RankDescription
 from db.models.models import Match, PlayerMatchStat, PlayerRankChange, Player
 from utils.base_types import StringEnum
 
@@ -18,6 +19,7 @@ class WebhookBody(BaseModel):
     stats: list[PlayerMatchStat]
     rank_changes: list[PlayerRankChange]
     players: list[Player]
+    rank_descriptions: list[RankDescription]
 
 class WebhookSendResult(BaseModel):
     id: str

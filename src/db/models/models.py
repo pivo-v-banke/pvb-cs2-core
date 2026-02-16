@@ -1,16 +1,23 @@
 from components.parsing.models import DemoParsingState
 from components.steam_connector.models import CS2DemoInfo
-from src.db.models.base import BaseMongoModel
+from db.models.base import BaseMongoModel
 
 
 class Player(BaseMongoModel):
 
     steam_id: str
     display_name: str
-    rank: int | None = None
     profile_url: str | None = None
     avatar_url: str | None = None
     steam_profile_name: str | None = None
+
+    # stats
+    rank: int | None = None
+    avg_kd: float | None = None
+    games_played: int | None = None
+    plus_kd_games: int | None = None
+    minus_kd_games: int | None = None
+
 
 
 class Match(BaseMongoModel):
