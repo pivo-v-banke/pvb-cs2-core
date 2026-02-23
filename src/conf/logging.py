@@ -29,10 +29,11 @@ LOGGING_CONFIG = {
         "SteamClient": {"handlers": ["default"], "level": LOGGING_LEVEL, "propagate": False},
         "celery": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
         "celery.app.trace": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
-        "celery.worker": {"handlers": ["celery"], "level": "INFO", "propagate": False},
+        "celery.worker": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
         "celery.redirected": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
         "kombu": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
         "amqp": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
         "billiard": {"handlers": ["celery"], "level": LOGGING_LEVEL, "propagate": False},
+        "pymongo": {"handlers": ["celery"], "level": "INFO", "propagate": False},
     },
 }

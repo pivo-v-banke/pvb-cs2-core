@@ -13,11 +13,31 @@ class WebhookSendStatus(StringEnum):
     NO_INTERESTS = "NO_INTERESTS"
 
 
-class WebhookBody(BaseModel):
+class WebhookType(StringEnum):
+    MATCH_STATS = "MATCH_STATS"
+    PLAYER_STATS = "PLAYER_STATS"
+    CALIBRATION = "CALIBRATION"
+
+
+class WebhookBaseBody(BaseModel):
     webhook_id: str
+    webhook_type: WebhookType
+
+
+class MatchStatWebhookBody(WebhookBaseBody):
     match: Match
     stats: list[PlayerMatchStat]
     rank_changes: list[PlayerRankChange]
+    players: list[Player]
+    rank_descriptions: list[RankDescription]
+
+
+class PlayerStatWebhookBody(WebhookBaseBody):
+    players: list[Player]
+    rank_descriptions: list[RankDescription]
+
+
+class CalibrationWebhookBody(WebhookBaseBody):
     players: list[Player]
     rank_descriptions: list[RankDescription]
 

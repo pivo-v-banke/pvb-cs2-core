@@ -3,7 +3,7 @@ import logging
 
 from components.steam_connector.steam_api import SteamAPIClient
 from db import get_database
-from db.managers.managers import MatchSourceManager
+from db.managers.managers import MatchSourceManager, MatchManager
 from db.models.models import MatchSource
 from utils.concurrency import RedisLockException
 
@@ -14,6 +14,11 @@ class MatchSourceCollector:
     def __init__(self):
         self.db = get_database()
         self.source_manager = MatchSourceManager(self.db)
+        self.match_manager = MatchManager(self.db)
+
+
+    async def rollback_all_sources(self):
+        pass
 
     async def collect_all_sources(self) -> None:
         logger.info(f'MatchSourceCollector: Collecting all sources')
@@ -23,7 +28,12 @@ class MatchSourceCollector:
         tasks = []
 
         async def _get_source_match_codes(source_: MatchSource) -> tuple[MatchSource, list[str]]:
-            return source_, await self._get_source_match_codes(source_)
+            try:
+                return source_, await self._get_source_match_codes(source_)
+            except Exception as exc:
+                logger.error("MatchSourceCollector: Failed to collect source %s: %s", source_, exc.args[0])
+                return source_, []
+
 
         for source in sources:
             tasks.append(
@@ -79,8 +89,8 @@ class MatchSourceCollector:
         if not match_codes:
             return
 
-        last_match_code = match_codes[0]
-        first_match_code = match_codes[-1]
+        last_match_code = match_codes[-1]
+        first_match_code = match_codes[0]
         await self.source_manager.update(
             id_=source.id,
             patch={

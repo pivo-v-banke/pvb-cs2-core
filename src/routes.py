@@ -7,7 +7,8 @@ from controllers.match_source import match_source_list_controller, match_source_
 from controllers.ranking import recalibrate_all
 from controllers.service import ping_controller
 from controllers.webhook import webhook_list_controller, webhook_detail_controller, webhook_create_controller, \
-    webhook_patch_controller, webhook_delete_controller, send_for_match
+    webhook_patch_controller, webhook_delete_controller, send_match_stats_webhook_controller, \
+    send_player_stats_webhook_controller
 
 
 def prepare_routes(app: FastAPI) -> None:
@@ -22,6 +23,8 @@ def prepare_routes(app: FastAPI) -> None:
     app.add_api_route("/api/webhook/{webhook_id}/", webhook_detail_controller, methods=["GET"], tags=["Webhook"])
     app.add_api_route("/api/webhook/{webhook_id}/", webhook_patch_controller, methods=["PATCH"], tags=["Webhook"])
     app.add_api_route("/api/webhook/{webhook_id}/", webhook_delete_controller, methods=["DELETE"], tags=["Webhook"])
+    app.add_api_route("/api/webhook/match_stats/{match}/send/", send_match_stats_webhook_controller, methods=["POST"], tags=["Webhook"])
+    app.add_api_route("/api/webhook/{webhook_id}/player_stats/send/", send_player_stats_webhook_controller, methods=["POST"], tags=["Webhook"])
 
     app.add_api_route("/api/match_source/", match_source_list_controller, methods=["GET"], tags=["MatchSource"])
     app.add_api_route("/api/match_source/", match_source_create_controller, methods=["POST"], tags=["MatchSource"])
@@ -31,4 +34,4 @@ def prepare_routes(app: FastAPI) -> None:
     app.add_api_route("/api/match_source/collect_all/", collect_all_match_sources_controller, methods=["POST"], tags=["MatchSource"])
     app.add_api_route("/api/match_source/{match_source_id}/collect/", collect_match_source_controller, methods=["POST"], tags=["MatchSource"])
 
-    app.add_api_route("/api/match/{match}/send_webhooks/", send_for_match, methods=["POST"], tags=["Match"])
+

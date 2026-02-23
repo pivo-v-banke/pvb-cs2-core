@@ -47,7 +47,7 @@ class PlayerRankChange(BaseMongoModel):
     new_rank: int
 
 
-class MatchStatsWebhook(BaseMongoModel):
+class Webhook(BaseMongoModel):
     url: str
     active: bool
     expected_steam_ids: list[str]

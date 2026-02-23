@@ -33,7 +33,7 @@ RANK_DESCRIPTIONS = [
     ),
     RankDescription(
         rank=4,
-        translate_ru="Голландский рулевой",
+        translate_ru="Голландский штурман",
     ),
     RankDescription(
         rank=5,

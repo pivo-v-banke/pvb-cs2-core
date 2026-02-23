@@ -19,11 +19,13 @@ from components.ranking.rank_updater import RankUpdater
 from components.steam_connector.client import SteamConnectorClient
 from components.steam_connector.models import CS2DemoInfo
 from components.steam_connector.steam_api import SteamAPIClient
-from components.webhook.sender import WebhookSender
+from components.webhook.models import WebhookType
+from components.webhook.sender import MatchStatWebhookSender, CalibrationWebhookSender, PlayerStatWebhookSender
 from conf.demo import DEMO_BASE_DIR
 from conf.parsing import PARSING_DEDUP_KEY_TTL
+from conf.ranking import RANKING_INITIAL_RANK
 from db import get_database, get_mongo_db
-from db.managers.managers import PlayerManager, MatchManager
+from db.managers.managers import PlayerManager, MatchManager, WebhookManager
 from db.models.models import Match
 from utils.concurrency import RedisLock
 
@@ -88,7 +90,15 @@ async def request_demo_url_task(context: dict) -> dict:
     context: DemoParsingContext = DemoParsingContext.model_validate(context)
     match_code = context.match_code
 
-    await DemoParsingDeduplicationChecker.check_parsing_duplicate(match_code)
+    match_manager = MatchManager(get_mongo_db())
+    existing_match = await match_manager.get(
+        match_code = match_code,
+    )
+    if existing_match:
+        raise DemoParsingError(f"Match {match_code} already exists")
+
+
+    await DemoParsingDeduplicationChecker.check_parsing_duplicate(match_code, raise_exc=True)
     parsing_lock = RedisLock(context.lock_key, ttl=PARSING_DEDUP_KEY_TTL)
     await parsing_lock.reacquire()
 
@@ -225,14 +235,42 @@ async def rank_calculation_task(context: dict) -> dict:
 @async_context
 @unlock_on_error
 async def all_players_calibration_task():
-    matches = await MatchManager(get_mongo_db()).list_(
+    db = get_mongo_db()
+    player_manager = PlayerManager(db)
+
+    webhooks = await WebhookManager(db).list_(
+        filter_by={
+            "active": True,
+        }
+    )
+    sender = CalibrationWebhookSender()
+    await sender.send_all()
+
+    matches = await MatchManager(db).list_(
         sort=[("created", 1)]
     )
+
+    for player in await player_manager.list_():
+        await player_manager.update(
+            search_by={
+                "steam_id": player.steam_id,
+            },
+            patch={
+                "rank": RANKING_INITIAL_RANK
+            }
+        )
+
     for match in matches:
         rank_updater = RankUpdater(match.cs2_match_id)
         stats_updater = PlayerStatsUpdater()
-        await rank_updater.update_player_ranks()
+        await rank_updater.update_player_ranks(overwrite=True)
         await stats_updater.calculate_players_stats(match.player_steam_ids)
+
+    for webhook in webhooks:
+        player_stat_sender = PlayerStatWebhookSender(
+            webhook.expected_steam_ids
+        )
+        await player_stat_sender.send(webhook)
 
 
 
@@ -286,7 +324,7 @@ class RefreshSteamProfilesTask(Task):
 async def send_webhooks_task(context: dict) -> dict:
     context: DemoParsingContext = DemoParsingContext.model_validate(context)
     match_code = context.match.match_code
-    sender = WebhookSender(match_code)
+    sender = MatchStatWebhookSender(match_code)
     await sender.send_all()
 
     return context.model_dump()

@@ -1,5 +1,5 @@
 from db.managers.base import BaseMongoDBManager
-from db.models.models import DemoParsingTask, Match, Player, PlayerMatchStat, PlayerRankChange, MatchStatsWebhook, \
+from db.models.models import DemoParsingTask, Match, Player, PlayerMatchStat, PlayerRankChange, Webhook, \
     MatchSource
 
 
@@ -30,6 +30,6 @@ class PlayerRankChangeManager(BaseMongoDBManager):
     model = PlayerRankChange
     collection_name = 'player_rank_changes'
 
-class MatchStatsWebhookManager(BaseMongoDBManager):
-    model = MatchStatsWebhook
+class WebhookManager(BaseMongoDBManager):
+    model = Webhook
     collection_name = 'webhooks'

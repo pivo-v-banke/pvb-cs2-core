@@ -90,7 +90,7 @@ class BaseMongoDBManager(Generic[TModel]):
         filter_by: dict[str, Any] | None = None,
         sort: Sequence[tuple[str, int]] | None = None,
         skip: int = 0,
-        limit: int = 100,
+        limit: int | None = None,
         projection: dict[str, int] | None = None,
     ) -> list[TModel]:
         query = filter_by or {}
@@ -103,7 +103,7 @@ class BaseMongoDBManager(Generic[TModel]):
         if limit:
             cursor = cursor.limit(limit)
 
-        docs = await cursor.to_list(length=limit if limit else 0)
+        docs = await cursor.to_list()
         return [self._from_doc(d) for d in docs]
 
     async def update(
